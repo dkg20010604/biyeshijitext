@@ -3,6 +3,7 @@ using AutoMapper;
 using DOEMTEXT.DTO.AUTOMapper;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using Microsoft.OpenApi.Models;
 
 namespace DOEMTEXT
 {
@@ -18,7 +19,35 @@ namespace DOEMTEXT
             builder.Services.AddControllers();
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
-            builder.Services.AddSwaggerGen();
+            builder.Services.AddSwaggerGen(c =>
+            {
+                c.SwaggerDoc("v1", new OpenApiInfo { Title = "WebSystem", Version = "v1" });
+                #region Swagger使用鉴权组件
+                c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+                {
+                    In = ParameterLocation.Header,
+                    Type = SecuritySchemeType.ApiKey,
+                    Description = "直接在下框中输入Bearer {token}（注意两者之间是一个空格）",
+                    Name = "Authorization",
+                    BearerFormat = "JWT",
+                    Scheme = "Bearer"
+                });
+                c.AddSecurityRequirement(new OpenApiSecurityRequirement
+                        {
+                    {
+                        new OpenApiSecurityScheme
+                        {
+                            Reference=new OpenApiReference
+                                {
+                                    Type=ReferenceType.SecurityScheme,
+                                    Id="Bearer"
+                                }
+                        },
+                        new string[] {}
+                    }
+                        });
+                #endregion
+            });
             builder.Services.AddSignalR();
             builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme);
             builder.Services.AddDbContext<Context.StudentContext>();
@@ -44,11 +73,13 @@ namespace DOEMTEXT
             });
 
             //配置Jwt认证服务
-            builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).
-                AddJwtBearer(options =>//配置jwtBearer
+            builder.Services.AddAuthentication(o =>
+            {
+                o.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                o.DefaultChallengeScheme= JwtBearerDefaults.AuthenticationScheme;
+            }).AddJwtBearer(options =>//配置jwtBearer
                 {
-                    var secretByte = Encoding.UTF8.GetBytes(builder.Configuration["Authentication:JwtPassword"]);
-                    options.TokenValidationParameters = new TokenValidationParameters()
+                    options.TokenValidationParameters = new TokenValidationParameters
                     {
 
                         ValidateIssuer = true,
@@ -59,20 +90,22 @@ namespace DOEMTEXT
 
                         ValidateLifetime = true,
 
-                        IssuerSigningKey = new SymmetricSecurityKey(secretByte)
+                        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Authentication:JwtPassword"]))
                     };
                 });
             //配置使用者身份
             builder.Services.AddAuthorization(
                 options =>
                 {
-                    options.AddPolicy("Nomal_Student", policy => policy.RequireClaim("NomalStudent"));
+                    options.AddPolicy("Base_power", policy => policy.RequireClaim("Base_power"));
+                    options.AddPolicy("Nomal_Student", policy => policy.RequireClaim("Nomal_Student"));
                     options.AddPolicy("College_inspect", policy => policy.RequireClaim("College_inspect"));
                     options.AddPolicy("Scool_inspect", policy => policy.RequireClaim("Scool_inspect"));
                     options.AddPolicy("Instructor", policy => policy.RequireClaim("Instructor"));
                     options.AddPolicy("Headmaster", policy => policy.RequireClaim("Headmaster"));
                     options.AddPolicy("College_manager", policy => policy.RequireClaim("College_manager"));
                     options.AddPolicy("Root_admin", policy => policy.RequireClaim("Root_admin"));
+                    //Console.WriteLine(options.ToString());
                 });
 
             var app = builder.Build();
@@ -83,7 +116,10 @@ namespace DOEMTEXT
                 app.UseSwagger();
                 app.UseSwaggerUI();
             }
+            app.UseStaticFiles();
 
+            app.UseRouting();
+            app.UseAuthentication();
             app.UseAuthorization();
             app.UseCors("allow_all");
 
