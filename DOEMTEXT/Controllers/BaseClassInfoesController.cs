@@ -72,7 +72,7 @@ namespace DOEMTEXT.Controllers
         [HttpPost("自定义查询")]
         public async Task<List<BaseClassInfomation>> Get(List<QueryEntity>? queryEntity,[FromServices] IMapper mapper)
         {
-            var data = await _context.BaseClassInfos.Where(ExpressionExtension<BaseClassInfo>.ExpressionSplice(queryEntity)).ToListAsync();
+            var data = await _context.BaseClassInfos.Where(p => p.Status == true).ToListAsync();
             return mapper.Map<List<BaseClassInfomation>>(data);
         }
         private bool BaseClassInfoExists(string id)

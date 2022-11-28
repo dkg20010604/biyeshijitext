@@ -22,5 +22,4 @@
 
         public string? Instructor { get; set; }
     }
-
 }

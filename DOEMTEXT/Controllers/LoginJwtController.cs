@@ -12,6 +12,9 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using ZSpitz.Util;
+using Microsoft.AspNetCore.SignalR;
+using DOEMTEXT.Hubs;
+using System.Numerics;
 
 namespace DOEMTEXT.Controllers
 {
@@ -28,26 +31,33 @@ namespace DOEMTEXT.Controllers
             _context = context;
             _mapper = mapper;
         }
+        [HttpPost("")]
+        [AllowAnonymous]
+        public async Task AddGroup()
+        {
+
+        }
 
         [HttpPost("Login")]
         [AllowAnonymous]
-        public APIHelp<string> Login([FromBody] LoginInfo login)
+        public async Task<APIHelp<string>> Login([FromBody] LoginInfo login)
         {
+            Hub<ChatHub> hub;
             //查询操作
             //do something
             //完成，得到权限等信息(测试直接将登录名输入为权限名)
             Claim[] claims;
             //普通学生
-            if (login.name == "Nomal_Student")
+            if (login.name.Contains("Normal"))
             {
                 claims = new Claim[]
                 {
-                    new Claim(ClaimTypes.Name,login.password),
+                    new Claim(ClaimTypes.NameIdentifier,login.password),
                     new Claim("Nomal_Student","true")
                 };
             }
             //院级宿检部
-            else if (login.name == "College_inspect")
+            else if (login.name.Contains("College"))
             {
                 claims = new Claim[]
                 {
@@ -56,7 +66,7 @@ namespace DOEMTEXT.Controllers
                     new Claim("College_inspect","true")
                 };
             }
-            else if (login.name == "Scool_inspect")
+            else if (login.name.Contains("Scool"))
             {
                 claims = new Claim[]
                 {
@@ -104,10 +114,8 @@ namespace DOEMTEXT.Controllers
                     Messege = "输入有误"
                 };
             }
-            var signingAlgorithm = SecurityAlgorithms.HmacSha256;
             var secretByte = Encoding.UTF8.GetBytes(_configuration["Authentication:JwtPassword"]);
             var signingKey = new SymmetricSecurityKey(secretByte);
-            var signingCredentials = new SigningCredentials(signingKey, signingAlgorithm);
 
             var token = new JwtSecurityToken(
                issuer: _configuration["Authentication:Admin"],//发布者

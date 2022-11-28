@@ -4,7 +4,7 @@ using System.Reflection;
 namespace DOEMTEXT.DTO
 {
     /// <summary>
-    /// 表达式扩展
+    /// 生成where查询时需要的参数
     /// </summary>
     /// <typeparam name="T">泛型</typeparam>
     public static class ExpressionExtension<T> where T : class, new()
@@ -39,7 +39,7 @@ namespace DOEMTEXT.DTO
         }
 
         /// <summary>
-        /// 创建 Expression<TDelegate>
+        /// 将单个查询实体转化为Lambdab表达式
         /// </summary>
         private static Expression<Func<T, bool>> CreateExpressionDelegate(QueryEntity entity)
         {
@@ -47,7 +47,7 @@ namespace DOEMTEXT.DTO
 
             Expression key = param;
             var entityKey = entity.Key.Trim();
-            // 包含'.'，说明是父表的字段
+            // 包含'.'要向下拓展实体和健名
             if (entityKey.Contains('.'))
             {
                 var Keylist = entityKey.Split('.');
@@ -77,7 +77,7 @@ namespace DOEMTEXT.DTO
             try
             {
                 PropertyInfo property;
-                // 包含'.'，说明是子类的字段
+                // 包含'.'要向下拓展实体和健名
                 if (entity.Key.Contains('.'))
                 {
                     var Keylist = entity.Key.Split('.');

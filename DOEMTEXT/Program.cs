@@ -4,7 +4,8 @@ using DOEMTEXT.DTO.AUTOMapper;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Microsoft.OpenApi.Models;
-
+using Microsoft.AspNetCore.SignalR;
+using DOEMTEXT.Hubs;
 namespace DOEMTEXT
 {
     public class Program
@@ -13,12 +14,12 @@ namespace DOEMTEXT
         {
 
             var builder = WebApplication.CreateBuilder(args);
-
             // Add services to the container.
 
             builder.Services.AddControllers();
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
+            builder.Services.AddSignalR();
             builder.Services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "WebSystem", Version = "v1" });
@@ -48,11 +49,9 @@ namespace DOEMTEXT
                         });
                 #endregion
             });
-            builder.Services.AddSignalR();
             builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme);
             builder.Services.AddDbContext<Context.StudentContext>();
-
-            //使用Auto mapper
+            #region 使用Auto mapper
             builder.Services.AddAutoMapper(
                 typeof(StudentMapper),
                 typeof(LiveInfoMapper),
@@ -60,23 +59,26 @@ namespace DOEMTEXT
                 typeof(CollegeMapper),
                 typeof(BaseClassInfoMapper),
                 typeof(DetailedClassInfoMapper));
-            //允许跨域请求
+            #endregion
+            #region 允许跨域请求
             builder.Services.AddCors(options =>
-            {
-                options.AddPolicy("allow_all", builder =>
-                {
-                    builder.AllowAnyOrigin()
-                    .AllowAnyMethod()
-                    .AllowAnyHeader()
-                    .AllowAnyMethod();
-                });
-            });
-
+                        {
+                            options.AddPolicy("SignalR", builder =>
+                            {
+                                builder
+                                .AllowCredentials()
+                                .WithOrigins("http://10.40.6.62:8080/")
+                                .AllowAnyMethod()
+                                .AllowAnyHeader()
+                                .SetIsOriginAllowed(s => true);
+                            });
+                        });
+            #endregion
             //配置Jwt认证服务
             builder.Services.AddAuthentication(o =>
             {
                 o.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-                o.DefaultChallengeScheme= JwtBearerDefaults.AuthenticationScheme;
+                o.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
             }).AddJwtBearer(options =>//配置jwtBearer
                 {
                     options.TokenValidationParameters = new TokenValidationParameters
@@ -113,6 +115,7 @@ namespace DOEMTEXT
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
             {
+                //app.UseDefaultFiles();
                 app.UseSwagger();
                 app.UseSwaggerUI();
             }
@@ -121,10 +124,10 @@ namespace DOEMTEXT
             app.UseRouting();
             app.UseAuthentication();
             app.UseAuthorization();
-            app.UseCors("allow_all");
-
+            app.UseCors("SignalR");
             app.MapControllers();
-
+            app.MapHub<ChatHub>("/chathub");
+            app.MapHub<GroupHub>("/grouphub");
             app.Run();
         }
     }
